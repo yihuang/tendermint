@@ -31,20 +31,17 @@ var isBuiltin = map[string]bool{
 
 // Call represents a call to a built-in function in a source program.
 type Call struct {
-	Name string         // the name of the built-in function
-	Call *ast.CallExpr  // the call expression in the AST
-	Site token.Position // the location of the call
-	Path []ast.Node     // the AST path to the call
-
-	// Comments attributed to the call site by the parser.
-	comments []*ast.CommentGroup
+	Name     string         // the name of the built-in function
+	Call     *ast.CallExpr  // the call expression in the AST
+	Site     token.Position // the location of the call
+	Path     []ast.Node     // the AST path to the call
+	Comments []string       // comments attributed to the call site by the parser
 }
 
-// Comments returns a slice of the comments attributed to this call site by the
-// parser. The text of each comment group is collapsed and stripped of leading
-// and trailing whitespace.
-func (c Call) Comments() (out []string) {
-	for _, cg := range c.comments {
+// flattenComments extracts the text of the given comment groups, and removes
+// leading and trailing whitespace from them.
+func flattenComments(cgs []*ast.CommentGroup) (out []string) {
+	for _, cg := range cgs {
 		out = append(out, strings.TrimSuffix(cg.Text(), "\n"))
 	}
 	return
@@ -69,16 +66,16 @@ func Parse(r io.Reader, filename string, f func(Call) error) error {
 
 	// Find the comments associated with node. If the node does not have its own
 	// comments, scan upward for a statement containing the node.
-	commentsFor := func(node ast.Node) []*ast.CommentGroup {
-		if cg := cmap[node]; cg != nil {
-			return cg
+	commentsFor := func(node ast.Node) []string {
+		if cgs := cmap[node]; cgs != nil {
+			return flattenComments(cgs)
 		}
 		for i := len(path) - 2; i >= 0; i-- {
 			if _, ok := path[i].(ast.Stmt); !ok {
 				continue
 			}
-			if cg := cmap[path[i]]; cg != nil {
-				return cg
+			if cgs := cmap[path[i]]; cgs != nil {
+				return flattenComments(cgs)
 			} else {
 				break
 			}
@@ -99,12 +96,11 @@ func Parse(r io.Reader, filename string, f func(Call) error) error {
 				}
 
 				if err := f(Call{
-					Name: id.Name,
-					Call: call,
-					Site: fset.Position(call.Pos()),
-					Path: path,
-
-					comments: commentsFor(node),
+					Name:     id.Name,
+					Call:     call,
+					Site:     fset.Position(call.Pos()),
+					Path:     path,
+					Comments: commentsFor(node),
 				}); err != nil {
 					return err
 				}

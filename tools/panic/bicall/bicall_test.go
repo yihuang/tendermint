@@ -25,8 +25,8 @@ func TestParse(t *testing.T) {
 
 		// Verify that the indicator comment shows up attributed to the site.
 		tag := "@" + c.Name
-		if cs := c.Comments(); len(cs) != 1 || cs[0] != tag {
-			t.Errorf("Wrong comment at %v: got %+q, want [%q]", c.Site, cs, tag)
+		if len(c.Comments) != 1 || c.Comments[0] != tag {
+			t.Errorf("Wrong comment at %v: got %+q, want [%q]", c.Site, c.Comments, tag)
 		}
 		return nil
 	})
