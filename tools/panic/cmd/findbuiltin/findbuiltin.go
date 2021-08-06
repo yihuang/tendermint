@@ -81,7 +81,7 @@ func mustProcessFile(path string) {
 			Path string   `json:"path"`
 			Line int      `json:"line"`
 			Col  int      `json:"col"`
-			Com  []string `json:"comments,omitempty"`
+			Com  []string `json:"comments"`
 		}{
 			Name: c.Name,
 			Path: c.Site.Filename,
