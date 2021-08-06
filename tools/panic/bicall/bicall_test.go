@@ -66,6 +66,7 @@ func main() {
       }
    }()
    ip := new(int)                  //@new
+   *ip = 3 + copy([]byte{}, "")    //@copy
    panic(fmt.Sprintf("ip=%p", ip)) //@panic
 }
 `
