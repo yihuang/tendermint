@@ -7,6 +7,7 @@ import (
 	"go/parser"
 	"go/token"
 	"io"
+	"strings"
 )
 
 // See https://golang.org/ref/spec#Built-in_functions
@@ -34,6 +35,19 @@ type Call struct {
 	Call *ast.CallExpr  // the call expression in the AST
 	Site token.Position // the location of the call
 	Path []ast.Node     // the AST path to the call
+
+	// Comments attributed to the call site by the parser.
+	comments []*ast.CommentGroup
+}
+
+// Comments returns a slice of the comments attributed to this call site by the
+// parser. The text of each comment group is collapsed and stripped of leading
+// and trailing whitespace.
+func (c Call) Comments() (out []string) {
+	for _, cg := range c.comments {
+		out = append(out, strings.TrimSuffix(cg.Text(), "\n"))
+	}
+	return
 }
 
 // Parse parses the contents of r as a Go source file, and calls f for each
@@ -49,8 +63,28 @@ func Parse(r io.Reader, filename string, f func(Call) error) error {
 	if err != nil {
 		return fmt.Errorf("parsing %q: %w", filename, err)
 	}
+	cmap := ast.NewCommentMap(fset, file, file.Comments)
 
 	var path []ast.Node
+
+	// Find the comments associated with node. If the node does not have its own
+	// comments, scan upward for a statement containing the node.
+	commentsFor := func(node ast.Node) []*ast.CommentGroup {
+		if cg := cmap[node]; cg != nil {
+			return cg
+		}
+		for i := len(path) - 2; i >= 0; i-- {
+			if _, ok := path[i].(ast.Stmt); !ok {
+				continue
+			}
+			if cg := cmap[path[i]]; cg != nil {
+				return cg
+			} else {
+				break
+			}
+		}
+		return nil
+	}
 	v := &visitor{
 		visit: func(node ast.Node) error {
 			if node == nil {
@@ -69,6 +103,8 @@ func Parse(r io.Reader, filename string, f func(Call) error) error {
 					Call: call,
 					Site: fset.Position(call.Pos()),
 					Path: path,
+
+					comments: commentsFor(node),
 				}); err != nil {
 					return err
 				}
