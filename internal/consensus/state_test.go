@@ -701,7 +701,7 @@ func TestStateLockPOLRelock(t *testing.T) {
 	signAddVotes(config, cs1, tmproto.PrevoteType, propBlockHash, propBlockParts.Header(), vs2, vs3, vs4)
 
 	// check that we unlock on the old block
-	ensureNewUnlock(t, unlockCh, height, round)
+	ensureNoNewUnlock(t, unlockCh)
 	// check that we lock on the new block
 	ensureLock(t, lockCh, height, round)
 
@@ -929,7 +929,7 @@ func TestStateLockPOLUnlockOnUnknownBlock(t *testing.T) {
 
 	ensurePrecommit(t, voteCh, height, round)
 	// we should have unlocked and locked on the new block, sending a precommit for this new block
-	validatePrecommit(t, cs1, round, -1, vss[0], nil, nil)
+	validatePrecommit(t, cs1, round, 0, vss[0], nil, firstBlockHash)
 
 	if err := cs1.SetProposalAndBlock(prop, propBlock, secondBlockParts, "some peer"); err != nil {
 		t.Fatal(err)
@@ -1272,7 +1272,7 @@ func TestProposeValidBlock(t *testing.T) {
 	ensureNewRound(t, newRoundCh, height, round)
 	t.Log("### ONTO ROUND 3")
 
-	ensureNewTimeout(timeoutWaitCh, height, round, cs1.config.Precommit(round).Nanoseconds())
+	ensureNewTimeout(t, timeoutWaitCh, height, round, cs1.config.Precommit(round).Nanoseconds())
 
 	round++ // moving to the next round
 
