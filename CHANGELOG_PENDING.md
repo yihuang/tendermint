@@ -24,4 +24,6 @@ Special thanks to external contributors on this release:
 
 ### IMPROVEMENTS
 
+- [cli] [\#8101](https://github.com/tendermint/tendermint/pull/8101) rollback command rollback block store if it has one more block than block state.
+
 ### BUG FIXES
