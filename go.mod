@@ -5,7 +5,7 @@ go 1.16
 require (
 	github.com/BurntSushi/toml v0.4.1
 	github.com/Workiva/go-datastructures v1.0.53
-	github.com/adlio/schema v1.1.13
+	github.com/adlio/schema v1.3.0
 	github.com/btcsuite/btcd v0.22.0-beta
 	github.com/btcsuite/btcutil v1.0.3-0.20201208143702-a53e38424cce
 	github.com/fortytw2/leaktest v1.3.0
@@ -18,7 +18,7 @@ require (
 	github.com/gorilla/websocket v1.4.2
 	github.com/grpc-ecosystem/go-grpc-middleware v1.3.0
 	github.com/grpc-ecosystem/go-grpc-prometheus v1.2.0
-	github.com/lib/pq v1.10.3
+	github.com/lib/pq v1.10.4
 	github.com/libp2p/go-buffer-pool v0.0.2
 	github.com/minio/highwayhash v1.0.2
 	github.com/mroth/weightedrand v0.4.1
@@ -36,7 +36,7 @@ require (
 	github.com/tendermint/tm-db v0.6.4
 	github.com/vektra/mockery/v2 v2.9.4
 	golang.org/x/crypto v0.0.0-20210817164053-32db794688a5
-	golang.org/x/net v0.0.0-20210503060351-7fd8e65b6420
+	golang.org/x/net v0.0.0-20211208012354-db4efeb81f4b
 	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c
 	google.golang.org/grpc v1.40.0
 	gopkg.in/check.v1 v1.0.0-20200902074654-038fdea0a05b // indirect
