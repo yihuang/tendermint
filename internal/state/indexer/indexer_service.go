@@ -4,6 +4,7 @@ import (
 	"context"
 	"time"
 
+	abci "github.com/tendermint/tendermint/abci/types"
 	"github.com/tendermint/tendermint/internal/eventbus"
 	"github.com/tendermint/tendermint/internal/pubsub"
 	"github.com/tendermint/tendermint/libs/log"
@@ -52,6 +53,8 @@ func (is *Service) publish(msg pubsub.Message) error {
 	// been delivered (in some order), we are ready to index. After indexing a
 	// block, we revert to the WAIT state for the next block.
 
+	var err error
+
 	if is.currentBlock.batch == nil {
 		// WAIT: Start a new block.
 		hdr := msg.Data().(types.EventDataNewBlockHeader)
@@ -96,15 +99,22 @@ func (is *Service) publish(msg pubsub.Message) error {
 
 			if curr.Size() != 0 {
 				start := time.Now()
-				err := sink.IndexTxEvents(curr.Ops)
-				if err != nil {
-					is.logger.Error("failed to index block txs",
-						"height", is.currentBlock.height, "err", err)
+				curr.Ops, err = DeduplicateBatch(curr.Ops, sink)
+				if err == nil {
+					if curr.Size() != 0 {
+						err := sink.IndexTxEvents(curr.Ops)
+						if err != nil {
+							is.logger.Error("failed to index block txs",
+								"height", is.currentBlock.height, "err", err)
+						} else {
+							is.metrics.TxEventsSeconds.Observe(time.Since(start).Seconds())
+							is.metrics.TransactionsIndexed.Add(float64(curr.Size()))
+							is.logger.Debug("indexed txs",
+								"height", is.currentBlock.height, "sink", sink.Type())
+						}
+					}
 				} else {
-					is.metrics.TxEventsSeconds.Observe(time.Since(start).Seconds())
-					is.metrics.TransactionsIndexed.Add(float64(curr.Size()))
-					is.logger.Debug("indexed txs",
-						"height", is.currentBlock.height, "sink", sink.Type())
+					is.logger.Error("deduplicate batch", "height", is.currentBlock.height)
 				}
 			}
 		}
@@ -168,4 +178,46 @@ func IndexingEnabled(sinks []EventSink) bool {
 	}
 
 	return false
+}
+
+// DeduplicateBatch consider the case of duplicate txs.
+// if the current one under investigation is NOT OK, then we need to check
+// whether there's a previously indexed tx.
+// SKIP the current tx if the previously indexed record is found and successful.
+func DeduplicateBatch(ops []*abci.TxResult, sink EventSink) ([]*abci.TxResult, error) {
+	result := make([]*abci.TxResult, 0, len(ops))
+
+	// keep track of successful txs in this block in order to suppress latter ones being indexed.
+	var successfulTxsInThisBlock = make(map[string]struct{})
+
+	for _, txResult := range ops {
+		hash := types.Tx(txResult.Tx).Hash()
+
+		if txResult.Result.IsOK() {
+			successfulTxsInThisBlock[string(hash)] = struct{}{}
+		} else {
+			// if it already appeared in current block and was successful, skip.
+			if _, found := successfulTxsInThisBlock[string(hash)]; found {
+				continue
+			}
+
+			// check if this tx hash is already indexed
+			old, err := sink.GetTxByHash(hash)
+
+			// if db op errored
+			// Not found is not an error
+			if err != nil {
+				return nil, err
+			}
+
+			// if it's already indexed in an older block and was successful, skip.
+			if old != nil && old.Result.Code == abci.CodeTypeOK {
+				continue
+			}
+		}
+
+		result = append(result, txResult)
+	}
+
+	return result, nil
 }
