@@ -38,7 +38,7 @@ require (
 	golang.org/x/crypto v0.0.0-20210817164053-32db794688a5
 	golang.org/x/net v0.0.0-20210503060351-7fd8e65b6420
 	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c
-	google.golang.org/grpc v1.40.0
+	google.golang.org/grpc v1.49.0
 	gopkg.in/check.v1 v1.0.0-20200902074654-038fdea0a05b // indirect
 	pgregory.net/rapid v0.4.7
 )
